@@ -18,14 +18,9 @@ class FindGoal(object):
                  proto.concat_cmd(proto.commands['set_cmd_optim'], 1)]
 
         self.client.send(setup)
+        self._wait_unit()
 
-        while True:
-            self.client.receive()
-            units = self.client.state.d['units_myself']
-            if units:
-                break
-
-    def _wait_for_restart(self):
+    def _wait_unit(self):
         while True:
             self.client.receive()
             units = self.client.state.d['units_myself']
@@ -33,6 +28,8 @@ class FindGoal(object):
                 break
 
     def _make_command(self, action):
+        STEP_SIZE = 8
+
         units = self.client.state.d['units_myself']
         if not units:
             return ""
@@ -40,13 +37,13 @@ class FindGoal(object):
         uid, ut = units.items()[0]
         mov_pos = [ut.x, ut.y]
         if action == 'left':
-            mov_pos[0] -= 8
+            mov_pos[0] -= STEP_SIZE
         elif action == 'right':
-            mov_pos[0] += 8
+            mov_pos[0] += STEP_SIZE
         elif action == 'up':
-            mov_pos[1] -= 8
+            mov_pos[1] -= STEP_SIZE
         elif action == 'down':
-            mov_pos[1] += 8
+            mov_pos[1] += STEP_SIZE
 
         cmd = [proto.concat_cmd(proto.commands['command_unit'],
                                uid, proto.unit_command_types['Move'], -1,
@@ -56,9 +53,15 @@ class FindGoal(object):
         return cmd, mov_pos
 
     def get_reward(self, action):
-        command, mov_pos = self._make_command(action)
+        if type(action) is str:
+            action_str = action
+        else:
+            action_str = self.action[action]
+        command, mov_pos = self._make_command(action_str)
         self.client.send(command)
         be_killed = False
+
+
         unit_x = -1
         unit_y = -1
         while True:
@@ -74,7 +77,7 @@ class FindGoal(object):
                 break
 
         if be_killed:
-            self._wait_for_restart()
+            self._wait_unit()
             self.client.receive()
             new_ore = self.client.state.d['frame'].resources[0].ore
             reward = new_ore - self.ore
@@ -94,18 +97,31 @@ class FindGoal(object):
 
         return [unit_x, unit_y]
 
+    def get_allow_actions(self):
+        return range(len(self.action))
+
 
 def test():
+    def show_action(find_goal, actions):
+        r_sum = 0
+        show_count = 0
+        while show_count < 2:
+            for a in actions:
+                s1, r, end = find_goal.get_reward(a)
+                r_sum += r
+                if end is True:
+                    break
+            show_count += 1
+
     find_goal = FindGoal()
-    actions = ['right', 'right', 'down', 'right', 'right', 'right', 'right',
+
+    actions_succ = ['right', 'right', 'down', 'right', 'right', 'right', 'right',
                'right', 'right', 'right']
-    r_sum = 0
-    while True:
-        for a in actions:
-            s1, r, end = find_goal.get_reward(a)
-            r_sum += r
-            if end is True:
-                break
+    show_action(find_goal, actions_succ)
+
+    actions_fail = ['right', 'right', 'down', 'down', 'down', 'down', 'down',
+               'right', 'right', 'right']
+    show_action(find_goal, actions_fail)
 
 
 if __name__=='__main__':
