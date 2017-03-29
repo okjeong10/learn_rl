@@ -5,6 +5,7 @@ import random
 
 class QFunction(object):
     def __init__(self, env):
+        self.learn_rate = 0.5
         self.q_tbl = {}
         self.allow_action = env.get_allow_actions()
 
@@ -23,17 +24,26 @@ class QFunction(object):
         return max(self.q_tbl[key])
 
     def get_max_action(self, state):
-        act_list = self.env.get_actions(state)
-        q_list = [self.q_tbl[state][act] for act in act_list]
-        max_act_id = np.argmax(q_list)
-        return act_list[max_act_id]
+        key = self._key(state)
+        if not self.q_tbl.has_key(key):
+            return random.choice(self.allow_action)
+
+        val_list = [(val, i) for i, val in enumerate(self.q_tbl[key])]
+        val_list = sorted(val_list, key=lambda v:v[0], reverse=True)
+        equal_end = 1
+        while equal_end < len(val_list):
+            if val_list[equal_end][0] != val_list[equal_end - 1][0]:
+                break
+            equal_end += 1
+        action = random.choice(val_list[:equal_end])[1]
+        return action
 
     def update_value(self, state, action, value):
         key = self._key(state)
         if not self.q_tbl.has_key(key):
             self.q_tbl[key] = [0] * len(self.allow_action)
 
-        self.q_tbl[key][action] = value
+        self.q_tbl[key][action] += self.learn_rate * value
 
     def update(self, trajectory, gamma=0.8):
         q_tbl_before = self.q_tbl.copy()
@@ -79,7 +89,7 @@ class Agent(object):
         self.ended = False
 
     def do_epsilon_greedy(self):
-        e = 1.0  # random
+        e = 0.1  # random
         pivot = np.random.uniform()
         if pivot < e:
             action_list = self.env.get_allow_actions()
@@ -111,7 +121,7 @@ def q_learning():
     agent = Agent(env, q_function)
 
     no_update_count = 0
-    max_episode = 50
+    max_episode = 50000
     i = 0
     while i < max_episode:
         agent.make_experience()
@@ -122,9 +132,7 @@ def q_learning():
             no_update_count += 1
         else:
             print('episode %d: %s' % (i, agent.trajectory))
-
-        if no_update_count == 10:
-            break
+            print(q_function.q_tbl)
 
         i += 1
 

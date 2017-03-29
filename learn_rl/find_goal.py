@@ -12,7 +12,7 @@ class FindGoal(object):
         self.ore = 0
         self.client.connect()
 
-        setup = [proto.concat_cmd(proto.commands['set_speed'], 60),
+        setup = [proto.concat_cmd(proto.commands['set_speed'], 10),
                  proto.concat_cmd(proto.commands['set_gui'], 1),
                  proto.concat_cmd(proto.commands['set_frameskip'], 9),
                  proto.concat_cmd(proto.commands['set_cmd_optim'], 1)]
@@ -78,9 +78,11 @@ class FindGoal(object):
 
         if be_killed:
             self._wait_unit()
-            self.client.receive()
             new_ore = self.client.state.d['frame'].resources[0].ore
-            reward = new_ore - self.ore
+            if new_ore == self.ore: # killed by siege tank
+                reward = -1
+            else: # kill in goal position
+                reward = new_ore - self.ore
             self.ore = new_ore
         else:
             reward = 0
