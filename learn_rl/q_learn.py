@@ -96,6 +96,20 @@ class Agent(object):
             action = random.choice(action_list)
         else:
             action = self.q_function.get_max_action(self.state)
+
+        #역방향 금지
+        while len(self.trajectory) > 1:
+            if self.trajectory[len(self.trajectory) - 1][1] == 0 and action == 1:                                
+                self.do_epsilon_greedy()
+            elif self.trajectory[len(self.trajectory) - 1][1] == 1 and action == 0:
+               self.do_epsilon_greedy()
+            elif self.trajectory[len(self.trajectory) - 1][1] == 2 and action == 3:
+               self.do_epsilon_greedy()
+            elif self.trajectory[len(self.trajectory) - 1][1] == 3 and action == 2:
+               self.do_epsilon_greedy()
+            break
+        ###
+
         self.state, reward, self.ended = self.env.get_reward(action)
         self.trajectory.append((self.state, action, reward))
 
