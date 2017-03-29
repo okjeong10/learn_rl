@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 import learn_rl.find_goal as fg
 import numpy as np
 import random

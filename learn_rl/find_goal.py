@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 import torchcraft_py.torchcraft as tc
 import torchcraft_py.proto as proto
 
