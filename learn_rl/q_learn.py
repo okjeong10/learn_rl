@@ -41,11 +41,13 @@ class QFunction(object):
         return action
 
     def update_value(self, state, action, value):
+        # q(s,a) = q(s,a) + alpha(r + gamma * max_a'[q(s',a')] - q(s, a))
         key = self._key(state)
         if not self.q_tbl.has_key(key):
             self.q_tbl[key] = [0] * len(self.allow_action)
 
-        self.q_tbl[key][action] += self.learn_rate * value
+        old_q = self.q_tbl[key][action]
+        self.q_tbl[key][action] += self.learn_rate * (value - old_q)
 
     def update(self, trajectory, gamma=0.8):
         q_tbl_before = self.q_tbl.copy()

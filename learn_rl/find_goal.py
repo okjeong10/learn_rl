@@ -24,10 +24,10 @@ class FindGoal(object):
 
     def _wait_unit(self):
         while True:
-            self.client.receive()
             units = self.client.state.d['units_myself']
             if units:
                 break
+            self.client.receive()
 
     def _make_command(self, action):
         STEP_SIZE = 8
@@ -52,14 +52,14 @@ class FindGoal(object):
                                mov_pos[0], mov_pos[1], -1),
                ]
 
-        return cmd, mov_pos
+        return cmd, mov_pos, uid
 
     def get_reward(self, action):
         if type(action) is str:
             action_str = action
         else:
             action_str = self.action[action]
-        command, mov_pos = self._make_command(action_str)
+        command, mov_pos, unit_id = self._make_command(action_str)
         self.client.send(command)
         be_killed = False
 
@@ -69,7 +69,7 @@ class FindGoal(object):
         while True:
             self.client.receive()
             units = self.client.state.d['units_myself']
-            if units:
+            if units and units.keys()[0] == unit_id:
                 unit_x = units.values()[0].x
                 unit_y = units.values()[0].y
                 if unit_x == mov_pos[0] and unit_y == mov_pos[1]:
