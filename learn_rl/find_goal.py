@@ -82,7 +82,7 @@ class FindGoal(object):
             self._wait_unit()
             new_ore = self.client.state.d['frame'].resources[0].ore
             if new_ore == self.ore: # killed by siege tank
-                reward = -1
+                reward = -50
             else: # kill in goal position
                 reward = new_ore - self.ore
             self.ore = new_ore

@@ -49,31 +49,31 @@ class QFunction(object):
         old_q = self.q_tbl[key][action]
         self.q_tbl[key][action] += self.learn_rate * (value - old_q)
 
+        if value != old_q:
+            return True
+        return False
+
     def update(self, trajectory, gamma=0.8):
-        q_tbl_before = self.q_tbl.copy()
         len_traj = len(trajectory)
 
         updated = False
-        j = 0
-        while j < len_traj - 1:
-            state, action, reward = trajectory[j]
-
-            next_state = trajectory[j + 1][0]
-            next_key = self._key(next_state)
-            if q_tbl_before.has_key(next_key):
-                max_q = max(q_tbl_before[next_key])
-            else:
-                max_q = 0
+        j = len_traj - 1
+        while j >= 0:
+            state, action, reward, new_state = trajectory[j]
+            max_q = 0
+            if j != len_traj - 1:
+                next_state = new_state
+                next_key = self._key(next_state)
+                if self.q_tbl.has_key(next_key):
+                    max_q = max(self.q_tbl[next_key])
 
             new_q = reward + gamma * max_q
 
-            state_key = self._key(state)
-            if q_tbl_before.has_key(state_key) and new_q != q_tbl_before[state_key][action]:
+            updated_value = self.update_value(state, action, new_q)
+            if updated_value:
                 updated = True
 
-            self.update_value(state, action, new_q)
-
-            j += 1
+            j -= 1
 
         return updated
 
@@ -93,32 +93,25 @@ class Agent(object):
         self.ended = False
 
     def do_epsilon_greedy(self):
-        e = 0.1  # random
+        e = 0.2  # random
         pivot = np.random.uniform()
         if pivot < e:
             action_list = self.env.get_allow_actions()
+            if self.trajectory:
+                last_direction = self.trajectory[-1][1]
+                if last_direction == 0 or last_direction == 2:
+                    counter_direction = last_direction + 1
+                else:
+                    counter_direction = last_direction - 1
+                action_list.remove(counter_direction)
             action = random.choice(action_list)
         else:
             action = self.q_function.get_max_action(self.state)
 
-        #역방향 금지
-        while len(self.trajectory) > 1:
-            if self.trajectory[len(self.trajectory) - 1][1] == 0 and action == 1:                                
-                self.do_epsilon_greedy()
-            elif self.trajectory[len(self.trajectory) - 1][1] == 1 and action == 0:
-               self.do_epsilon_greedy()
-            elif self.trajectory[len(self.trajectory) - 1][1] == 2 and action == 3:
-               self.do_epsilon_greedy()
-            elif self.trajectory[len(self.trajectory) - 1][1] == 3 and action == 2:
-               self.do_epsilon_greedy()
-            break
-        ###
+        new_state, reward, self.ended = self.env.get_reward(action)
 
-        self.state, reward, self.ended = self.env.get_reward(action)
-        self.trajectory.append((self.state, action, reward))
-
-    def finalize_trajectory(self):
-        self.trajectory.append((self.state, -1, -1))
+        self.trajectory.append((self.state, action, reward, new_state))
+        self.state = new_state
 
     def is_goal(self):
         return self.ended
@@ -130,7 +123,6 @@ class Agent(object):
         self.begin()
         while not self.is_goal():
             self.do_epsilon_greedy()
-        self.finalize_trajectory()
 
 
 def q_learning():
